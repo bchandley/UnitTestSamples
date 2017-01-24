@@ -5,6 +5,8 @@
  */
 package org.bchandley.testing.unittestsamples;
 
+import org.bchandley.testing.unittestsamples.model.ProcessFileRequest;
+import org.bchandley.testing.unittestsamples.model.ProcessFileResponse;
 import static org.hamcrest.CoreMatchers.containsString;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -31,7 +33,7 @@ public class FileProcessorTest {
         //ACT
         ProcessFileResponse resp=  sut.processFile(request);        
         //ASSERT
-        assertNotNull("The file shoudl have been registered. The Id is not set",resp.responseId);
+        assertNotNull("The file should have been registered. The Id is not set",resp.responseId);
     }
 
     @Test

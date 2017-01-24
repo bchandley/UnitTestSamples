@@ -5,6 +5,7 @@
  */
 package org.bchandley.testing.unittestsamples;
 
+import org.bchandley.testing.unittestsamples.model.ProcessFileRequest;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;

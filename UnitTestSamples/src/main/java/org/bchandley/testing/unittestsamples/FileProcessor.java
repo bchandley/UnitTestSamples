@@ -5,25 +5,57 @@
  */
 package org.bchandley.testing.unittestsamples;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.Date;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import org.bchandley.testing.unittestsamples.model.ProcessFileResponse;
+import org.bchandley.testing.unittestsamples.model.ProcessFileRequest;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.Calendar;
 
-import java.util.Properties;
+import org.bchandley.testing.unittestsamples.dal.AdvertiserDal;
+import org.bchandley.testing.unittestsamples.dal.AdvertiserDalImpl;
+import org.bchandley.testing.unittestsamples.dal.FileRegistrationDal;
+import org.bchandley.testing.unittestsamples.dal.FileRegistrationDalImpl;
+import org.bchandley.testing.unittestsamples.dal.PublisherDal;
+import org.bchandley.testing.unittestsamples.dal.PublisherDalImpl;
+import org.bchandley.testing.unittestsamples.mamagers.FileSystemManager;
+import org.bchandley.testing.unittestsamples.mamagers.FileSystemManagerImpl;
+import org.bchandley.testing.unittestsamples.model.RegisteredFile;
+
+
 
 /**
  *
  * @author bchandley
  */
 public class FileProcessor {
-
+    
+    /**
+     * Manages data for advertiser data access
+     */
+    private AdvertiserDal advertiserDal = new AdvertiserDalImpl();
+    
+    /**
+     * Manages data for advertiser data access
+     */    
+    private PublisherDal publisherDal = new PublisherDalImpl();
+    
+    /**
+     * Manages data access operations for 
+     */
+    private FileRegistrationDal fileRegistrationDal = new FileRegistrationDalImpl();
+    
+    /**
+     * Manages file-related operations
+     */
+    private FileSystemManager fileSystemManager = new FileSystemManagerImpl();
+    
+    
+    /**
+     * Process the fi=                                 
+     * +le and
+     * @param request
+     * @return
+     * @throws SQLException 
+     */
     public ProcessFileResponse processFile(ProcessFileRequest request) throws SQLException {
         if (request == null) {
             throw new IllegalArgumentException("ProcessFileRequest is null");
@@ -37,56 +69,58 @@ public class FileProcessor {
         if (request.fileName == null || request.fileName.trim().equals("")) {
             throw new IllegalArgumentException("fileName is not provided");
         }
+        
         if (request.filePath == null || request.filePath.trim().equals("")) {
             throw new IllegalArgumentException("filePath is not provided");
-        }
-
-        Path p = Paths.get(request.fileName, request.filePath);
-        if (!Files.exists(p)) {
-            throw new IllegalArgumentException("The file specified file does not exist (" + p.toString() + ")");
+        }       
+        
+        if (!fileSystemManager.FileExists(request.fileName, request.filePath)) {
+            throw new IllegalArgumentException("The file '"+  request.fileName + "' does not exist in directory: " +request.filePath );
         }
 
         ProcessFileResponse response = new ProcessFileResponse();
-        Properties connectionProps = new Properties();
-        connectionProps.put("user", "app");
-        connectionProps.put("password", "app");
-
-        String selectAdvertiserSql = "SELECT id FROM files.advertiser where advertiserCode=?";
-        String selectPublisherSql = "SELECT id FROM files.publisher  where publisherCode=?";
-        String registerFileSql = "INSERT INTO    files.registered_file (path,fileName,publisher_id,advertiser_id,createddate) VALUES (?,?,?,?,?)";
-        String baseConnString = "jdbc:mysql://localhost:3306/files?useSSL=false";
-        try (
-                Connection conn = DriverManager.getConnection(baseConnString, connectionProps);
-                PreparedStatement selectAdvertiser = conn.prepareStatement(selectAdvertiserSql);
-                PreparedStatement selectPublisher = conn.prepareStatement(selectPublisherSql);
-                PreparedStatement registerFile = conn.prepareStatement(registerFileSql, Statement.RETURN_GENERATED_KEYS);) {
-            selectAdvertiser.setString(1, request.advetiserCode);
-            selectPublisher.setString(1, request.publisherCode);
-
-            registerFile.setString(1, request.filePath);
-            registerFile.setString(2, request.fileName);
-
-            ResultSet advertiserResults = selectAdvertiser.executeQuery();
-            if (advertiserResults == null || !advertiserResults.first()) {
-                throw new IllegalArgumentException("Advertiser Code could not be found '" + request.advetiserCode + "'");
-            }
-            ResultSet publisherResults = selectPublisher.executeQuery();
-            if (publisherResults == null || !publisherResults.first()) {
-                throw new IllegalArgumentException("publisher Code could not be found '" + request.publisherCode + "'");
-            }
-            registerFile.setInt(3, advertiserResults.getInt(1));
-            registerFile.setInt(4, publisherResults.getInt(1));
-
-            java.util.Date utilDate = new java.util.Date();
-            registerFile.setDate(5, new Date(utilDate.getTime()));
-            registerFile.executeUpdate();
-            ResultSet rs = registerFile.getGeneratedKeys();
-            if(rs.next())
-                response.responseId=rs.getInt(1);
-            
-        }
-
+        Integer advertiserId= advertiserDal.getIdByCode(request.advetiserCode);
+        Integer publisherId= publisherDal.getIdByCode(request.publisherCode);
+        RegisteredFile registeredFile = new RegisteredFile();
+        registeredFile.setFileName(request.fileName);
+        registeredFile.setFilePath(request.filePath);
+        registeredFile.setAdvertiserId(advertiserId);
+        registeredFile.setPublisherId(publisherId);
+        registeredFile.setRegisteredDate(Calendar.getInstance());
+   
         return response;
 
+    }
+
+    /**
+     * Manages data for advertiser data access
+     * @param advertiserDal the advertiserDal to set
+     */
+    protected void setAdvertiserDal(AdvertiserDal advertiserDal) {
+        this.advertiserDal = advertiserDal;
+    }
+
+    /**
+     * Manages data for advertiser data access
+     * @param publisherDal the publisherDal to set
+     */
+    protected void setPublisherDal(PublisherDal publisherDal) {
+        this.publisherDal = publisherDal;
+    }
+
+    /**
+     * Manages data access operations for
+     * @param fileRegistrationDal the fileRegistrationDal to set
+     */
+    protected void setFileRegistrationDal(FileRegistrationDal fileRegistrationDal) {
+        this.fileRegistrationDal = fileRegistrationDal;
+    }
+
+    /**
+     * Manages file-related operations
+     * @param fileSystemManager the fileSystemManager to set
+     */
+    protected void setFileSystemManager(FileSystemManager fileSystemManager) {
+        this.fileSystemManager = fileSystemManager;
     }
 }
